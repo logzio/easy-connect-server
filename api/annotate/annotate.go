@@ -5,13 +5,11 @@ import (
 	"encoding/json"
 	"github.com/logzio/ezkonnect-server/api"
 	"go.uber.org/zap"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
-	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"net/http"
@@ -116,57 +114,20 @@ func UpdateResourceAnnotations(w http.ResponseWriter, r *http.Request) {
 		options.FieldSelector = "metadata.name=" + resource.Name
 	})
 	crdInformer := dynamicFactory.ForResource(gvr)
-	// watch for crd spec changes to indicate about log type changes
+	// watch for crd status changes to indicate about instrumentation status change (instrument, rollback) orcrd spec changes to indicate about log type changes
 	crdInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			newSpec := newObj.(*unstructured.Unstructured).Object["spec"].(map[string]interface{})
 			oldSpec := oldObj.(*unstructured.Unstructured).Object["spec"].(map[string]interface{})
-			if !api.DeepEqualMap(oldSpec, newSpec) {
-				updateCh <- struct{}{} // Signal that the update occurred
-			}
-		},
-	})
-	// watch for crd status changes to indicate about instrumentation status change (instrument, rollback)
-	crdInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		UpdateFunc: func(oldObj, newObj interface{}) {
 			newStatus := newObj.(*unstructured.Unstructured).Object["status"].(map[string]interface{})
 			oldStatus := oldObj.(*unstructured.Unstructured).Object["status"].(map[string]interface{})
-			if !api.DeepEqualMap(oldStatus, newStatus) {
+			if !api.DeepEqualMap(oldSpec, newSpec) || !api.DeepEqualMap(oldStatus, newStatus) {
 				updateCh <- struct{}{} // Signal that the update occurred
 			}
 		},
 	})
 	// start watching for changes in crd
 	dynamicFactory.Start(ctx.Done())
-
-	// Create a shared informer factory for Deployments and statefulsets
-	sharedFactory := informers.NewSharedInformerFactory(clientset, 1*time.Second)
-	var sharedInformer cache.SharedIndexInformer
-	switch resource.ControllerKind {
-	case api.KindDeployment:
-		// Create an informer for Deployments
-		sharedInformer = sharedFactory.Apps().V1().Deployments().Informer()
-	case api.KindStatefulSet:
-		// Create an informer for StatefulSets
-		sharedInformer = sharedFactory.Apps().V1().StatefulSets().Informer()
-	}
-
-	// handlers for update events on Deployments/StatefulSets
-	sharedInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		UpdateFunc: func(oldObj, newObj interface{}) {
-			// Cast the updated object to a metav1.Object to access its annotations
-			newMeta := newObj.(metav1.Object)
-			oldMeta := oldObj.(metav1.Object)
-
-			// Check if the ServiceNameAnnotation has changed
-			if newMeta.GetAnnotations()[ServiceNameAnnotation] != oldMeta.GetAnnotations()[ServiceNameAnnotation] {
-				logger.Info("ServiceNameAnnotation changed: " + resource.Name)
-				updateCh <- struct{}{}
-			}
-		},
-	})
-	// start watching for changes in workload
-	sharedFactory.Start(ctx.Done())
 
 	// Create the response
 	response := ResourceAnnotateResponse{
@@ -181,13 +142,6 @@ func UpdateResourceAnnotations(w http.ResponseWriter, r *http.Request) {
 	if resource.ServiceName == "" {
 		actionValue = "rollback"
 	}
-	instrumentationAnnotations := map[string]string{}
-	instrumentationAnnotations[InstrumentationAnnotation] = actionValue
-	// add service name annotation if exists
-	if resource.ServiceName != "" {
-		instrumentationAnnotations[ServiceNameAnnotation] = resource.ServiceName
-	}
-
 	// Update workload and custom resources
 	switch resource.ControllerKind {
 	case api.KindDeployment:
@@ -207,12 +161,15 @@ func UpdateResourceAnnotations(w http.ResponseWriter, r *http.Request) {
 		} else {
 			delete(deployment.Spec.Template.ObjectMeta.Annotations, LogTypeAnnotation)
 		}
-
 		// handle traces instrumentation annotations
-		for k, v := range instrumentationAnnotations {
-			deployment.Spec.Template.ObjectMeta.Annotations[k] = v
+		// logz.io/instrument
+		deployment.Spec.Template.ObjectMeta.Annotations[InstrumentationAnnotation] = actionValue
+		// service name
+		if len(resource.ServiceName) != 0 {
+			deployment.Spec.Template.ObjectMeta.Annotations[ServiceNameAnnotation] = resource.ServiceName
+		} else {
+			delete(deployment.Spec.Template.ObjectMeta.Annotations, ServiceNameAnnotation)
 		}
-
 		_, err = clientset.AppsV1().Deployments(resource.Namespace).Update(ctx, deployment, v1.UpdateOptions{})
 		if err != nil {
 			logger.Error(api.ErrorUpdate, err)
@@ -239,10 +196,14 @@ func UpdateResourceAnnotations(w http.ResponseWriter, r *http.Request) {
 			delete(statefulSet.Spec.Template.ObjectMeta.Annotations, LogTypeAnnotation)
 		}
 		// handle traces instrumentation annotations
-		for k, v := range instrumentationAnnotations {
-			statefulSet.Spec.Template.ObjectMeta.Annotations[k] = v
+		// logz.io/instrument
+		statefulSet.Spec.Template.ObjectMeta.Annotations[InstrumentationAnnotation] = actionValue
+		// service name
+		if len(resource.ServiceName) != 0 {
+			statefulSet.Spec.Template.ObjectMeta.Annotations[ServiceNameAnnotation] = resource.ServiceName
+		} else {
+			delete(statefulSet.Spec.Template.ObjectMeta.Annotations, ServiceNameAnnotation)
 		}
-
 		_, err = clientset.AppsV1().StatefulSets(resource.Namespace).Update(ctx, statefulSet, v1.UpdateOptions{})
 		if err != nil {
 			logger.Error(api.ErrorUpdate, err)
@@ -250,7 +211,6 @@ func UpdateResourceAnnotations(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
 	// Wait for the update to occur or timeout
 	select {
 	case <-updateCh:

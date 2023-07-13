@@ -5,12 +5,9 @@ import (
 	"encoding/json"
 	"github.com/logzio/ezkonnect-server/api"
 	"go.uber.org/zap"
-	v1core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
 	"net/http"
 	"strings"
 )
@@ -56,12 +53,6 @@ func GetCustomResourcesHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, api.ErrorKubeConfig+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		logger.Error(api.ErrorKubeClient, err)
-		http.Error(w, api.ErrorKubeClient+err.Error(), http.StatusInternalServerError)
-		return
-	}
 	// Create a dynamic client
 	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
@@ -102,26 +93,7 @@ func GetCustomResourcesHandler(w http.ResponseWriter, r *http.Request) {
 				langStr := language.(map[string]interface{})["language"].(string)
 				containerNameStr := language.(map[string]interface{})["containerName"].(string)
 				// Handle the serviceName field, since this app can be instrumented
-				var serviceName string
-				switch controllerKind {
-				case api.KindDeployment:
-					deployment, getDepErr := clientset.AppsV1().Deployments(namespace).Get(context.Background(), item.GetOwnerReferences()[0].Name, v1.GetOptions{})
-					if getDepErr != nil {
-						logger.Error(api.ErrorGet, err)
-						http.Error(w, api.ErrorGet+err.Error(), http.StatusInternalServerError)
-						return
-					}
-					serviceName = calculateServiceName(&deployment.Spec.Template, item, containerNameStr)
-
-				case api.KindStatefulSet:
-					statefulSet, getStatefulSetErr := clientset.AppsV1().StatefulSets(namespace).Get(context.Background(), item.GetOwnerReferences()[0].Name, v1.GetOptions{})
-					if getStatefulSetErr != nil {
-						logger.Error(api.ErrorGet, err)
-						http.Error(w, api.ErrorGet+err.Error(), http.StatusInternalServerError)
-						return
-					}
-					serviceName = calculateServiceName(&statefulSet.Spec.Template, item, containerNameStr)
-				}
+				serviceName := calculateServiceName(language, status)
 				otelDetectedBool := language.(map[string]interface{})["opentelemetryPreconfigured"].(bool)
 				entry := InstrumentdApplicationData{
 					Name:                       name,
@@ -183,15 +155,12 @@ func GetCustomResourcesHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(data)
 }
 
-func calculateServiceName(podSpec *v1core.PodTemplateSpec, item unstructured.Unstructured, containerName string) string {
-	if podSpec.Annotations[api.LogzioServiceAnnotationName] != "" {
-		return podSpec.Annotations[api.LogzioServiceAnnotationName]
+func calculateServiceName(service interface{}, status map[string]interface{}) string {
+	switch status["tracesInstrumented"].(bool) {
+	case true:
+		return service.(map[string]interface{})["activeServiceName"].(string)
+	case false:
+		return ""
 	}
-	if len(podSpec.Spec.Containers) > 1 {
-		return containerName
-	}
-	if strings.ToLower(item.GetOwnerReferences()[0].Name) == containerName {
-		return containerName
-	}
-	return strings.ToLower(item.GetOwnerReferences()[0].Name) + "-" + containerName
+	return ""
 }
