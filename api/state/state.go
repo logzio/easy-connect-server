@@ -93,7 +93,7 @@ func GetCustomResourcesHandler(w http.ResponseWriter, r *http.Request) {
 				langStr := language.(map[string]interface{})["language"].(string)
 				containerNameStr := language.(map[string]interface{})["containerName"].(string)
 				// Handle the serviceName field, since this app can be instrumented
-				serviceName := calculateServiceName(language, status)
+				serviceName := calculateServiceName(language)
 				otelDetectedBool := language.(map[string]interface{})["opentelemetryPreconfigured"].(bool)
 				entry := InstrumentdApplicationData{
 					Name:                       name,
@@ -155,12 +155,6 @@ func GetCustomResourcesHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(data)
 }
 
-func calculateServiceName(service interface{}, status map[string]interface{}) string {
-	switch status["tracesInstrumented"].(bool) {
-	case true:
-		return service.(map[string]interface{})["activeServiceName"].(string)
-	case false:
-		return ""
-	}
-	return ""
+func calculateServiceName(service interface{}) string {
+	return service.(map[string]interface{})["activeServiceName"].(string)
 }
