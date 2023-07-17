@@ -62,8 +62,8 @@ func GetTimeout() (time.Duration, error) {
 	var err error
 	timeoutStr := os.Getenv("REQUEST_TIMEOUT_SECONDS")
 	if timeoutStr == "" {
-		// Default timeout is 60 seconds
-		timeoutSeconds = 60
+		// Default timeout is 90 seconds
+		timeoutSeconds = 90
 	} else {
 		timeoutSeconds, err = strconv.Atoi(timeoutStr)
 		if err != nil {
