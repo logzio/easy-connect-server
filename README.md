@@ -27,7 +27,7 @@ This endpoint allows you to update annotations for Kubernetes deployments and st
 
 ## changelog
 - v1.0.5
-  - Unify logs and traces
+  - Unify logs and traces endpoint
   - Validate instrumentation status change and log type before returning a 200 response
   - Remove action from the request model
   - Add `REQUESTTIMEOUT_SECONDS` env var
