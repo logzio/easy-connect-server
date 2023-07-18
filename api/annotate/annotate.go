@@ -93,9 +93,7 @@ func UpdateResourceAnnotations(w http.ResponseWriter, r *http.Request) {
 		Resource: api.ResourceInstrumentedApplication,
 	}
 	// Validate input before updating resources to avoid changing resources and retuning an error
-	validRequest := isValidResourceAnnotateRequest(resource)
-	// if one of the requests is invalid, return an error
-	if !validRequest {
+	if !isValidResourceAnnotateRequest(resource) {
 		logger.Error(api.ErrorInvalidInput)
 		http.Error(w, api.ErrorInvalidInput, http.StatusBadRequest)
 		return
@@ -116,7 +114,7 @@ func UpdateResourceAnnotations(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, api.ErrorGet+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// calculate how many crd changes are expected due the current operations
+	// Calculate how many crd changes are expected due to the current operations
 	expectedChanges := calculateExpectedCrdChanges(resource, customResourceObj)
 	logger.Infof("Expected numbers of changes for %s resource: %d", resource.Name, expectedChanges)
 	// Create a channel to signal about workload and crd updates

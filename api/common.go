@@ -56,7 +56,7 @@ func InitLogger() zap.SugaredLogger {
 	return *logger.Sugar()
 }
 
-// GetTimeout returns the timeout for the request in time.Duration
+// GetTimeout returns the timeout for the request in time.Duration in seconds
 func GetTimeout() (time.Duration, error) {
 	var timeoutSeconds int
 	var err error
