@@ -164,70 +164,16 @@ func UpdateResourceAnnotations(w http.ResponseWriter, r *http.Request) {
 	// Update workload and custom resources
 	switch resource.ControllerKind {
 	case api.KindDeployment:
-		logger.Info("Updating deployment: ", resource.Name)
-		deployment, getErr := clientset.AppsV1().Deployments(resource.Namespace).Get(ctx, resource.Name, v1.GetOptions{})
-		if getErr != nil {
-			logger.Error(api.ErrorGet, getErr)
-			http.Error(w, api.ErrorGet+getErr.Error(), http.StatusInternalServerError)
-			return
-		}
-		// handle log type
-		if deployment.Spec.Template.ObjectMeta.Annotations == nil {
-			deployment.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
-		}
-		if len(resource.LogType) != 0 {
-			deployment.Spec.Template.ObjectMeta.Annotations[LogTypeAnnotation] = resource.LogType
-		} else {
-			delete(deployment.Spec.Template.ObjectMeta.Annotations, LogTypeAnnotation)
-		}
-		// handle traces instrumentation annotations
-		// logz.io/instrument
-		deployment.Spec.Template.ObjectMeta.Annotations[InstrumentationAnnotation] = actionValue
-		// service name
-		if len(resource.ServiceName) != 0 {
-			deployment.Spec.Template.ObjectMeta.Annotations[ServiceNameAnnotation] = resource.ServiceName
-		} else {
-			delete(deployment.Spec.Template.ObjectMeta.Annotations, ServiceNameAnnotation)
-		}
-		_, err = clientset.AppsV1().Deployments(resource.Namespace).Update(ctx, deployment, v1.UpdateOptions{})
+		err = handleUpdateDeployment(ctx, resource, clientset, logger, actionValue)
 		if err != nil {
 			logger.Error(api.ErrorUpdate, err)
 			http.Error(w, api.ErrorUpdate+err.Error(), http.StatusInternalServerError)
-			return
 		}
-
 	case api.KindStatefulSet:
-		logger.Info("Updating statefulset: ", resource.Name)
-		statefulSet, getErr := clientset.AppsV1().StatefulSets(resource.Namespace).Get(ctx, resource.Name, v1.GetOptions{})
-		if getErr != nil {
-			logger.Error(api.ErrorGet, getErr)
-			http.Error(w, api.ErrorGet+getErr.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		if statefulSet.Spec.Template.ObjectMeta.Annotations == nil {
-			statefulSet.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
-		}
-		// handle logs
-		if len(resource.LogType) != 0 {
-			statefulSet.Spec.Template.ObjectMeta.Annotations[LogTypeAnnotation] = resource.LogType
-		} else {
-			delete(statefulSet.Spec.Template.ObjectMeta.Annotations, LogTypeAnnotation)
-		}
-		// handle traces instrumentation annotations
-		// logz.io/instrument
-		statefulSet.Spec.Template.ObjectMeta.Annotations[InstrumentationAnnotation] = actionValue
-		// service name
-		if len(resource.ServiceName) != 0 {
-			statefulSet.Spec.Template.ObjectMeta.Annotations[ServiceNameAnnotation] = resource.ServiceName
-		} else {
-			delete(statefulSet.Spec.Template.ObjectMeta.Annotations, ServiceNameAnnotation)
-		}
-		_, err = clientset.AppsV1().StatefulSets(resource.Namespace).Update(ctx, statefulSet, v1.UpdateOptions{})
+		err = handleUpdateStatefulset(ctx, resource, clientset, logger, actionValue)
 		if err != nil {
 			logger.Error(api.ErrorUpdate, err)
 			http.Error(w, api.ErrorUpdate+err.Error(), http.StatusInternalServerError)
-			return
 		}
 	}
 	// Wait for the expected numbers of updates to occur or timeout
@@ -255,6 +201,75 @@ func isValidResourceAnnotateRequest(req ResourceAnnotateRequest) bool {
 		}
 	}
 	return false
+}
+
+// handleUpdateDeployment handles update of deployment
+func handleUpdateDeployment(ctx context.Context, resource ResourceAnnotateRequest, clientset kubernetes.Interface, logger zap.SugaredLogger, actionValue string) error {
+	logger.Info("Updating deployment: ", resource.Name)
+	deployment, err := clientset.AppsV1().Deployments(resource.Namespace).Get(ctx, resource.Name, v1.GetOptions{})
+	if err != nil {
+		logger.Error(api.ErrorGet, err)
+		return err
+	}
+	// handle log type
+	if deployment.Spec.Template.ObjectMeta.Annotations == nil {
+		deployment.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
+	}
+	if len(resource.LogType) != 0 {
+		deployment.Spec.Template.ObjectMeta.Annotations[LogTypeAnnotation] = resource.LogType
+	} else {
+		delete(deployment.Spec.Template.ObjectMeta.Annotations, LogTypeAnnotation)
+	}
+	// handle traces instrumentation annotations
+	// logz.io/instrument
+	deployment.Spec.Template.ObjectMeta.Annotations[InstrumentationAnnotation] = actionValue
+	// service name
+	if len(resource.ServiceName) != 0 {
+		deployment.Spec.Template.ObjectMeta.Annotations[ServiceNameAnnotation] = resource.ServiceName
+	} else {
+		delete(deployment.Spec.Template.ObjectMeta.Annotations, ServiceNameAnnotation)
+	}
+	_, err = clientset.AppsV1().Deployments(resource.Namespace).Update(ctx, deployment, v1.UpdateOptions{})
+	if err != nil {
+		logger.Error(api.ErrorUpdate, err)
+		return err
+	}
+	return nil
+}
+
+// handleUpdateStatefulset handles update of statefulset
+func handleUpdateStatefulset(ctx context.Context, resource ResourceAnnotateRequest, clientset kubernetes.Interface, logger zap.SugaredLogger, actionValue string) error {
+	logger.Info("Updating statefulset: ", resource.Name)
+	statefulSet, err := clientset.AppsV1().StatefulSets(resource.Namespace).Get(ctx, resource.Name, v1.GetOptions{})
+	if err != nil {
+		logger.Error(api.ErrorGet, err)
+		return err
+	}
+
+	if statefulSet.Spec.Template.ObjectMeta.Annotations == nil {
+		statefulSet.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
+	}
+	// handle logs
+	if len(resource.LogType) != 0 {
+		statefulSet.Spec.Template.ObjectMeta.Annotations[LogTypeAnnotation] = resource.LogType
+	} else {
+		delete(statefulSet.Spec.Template.ObjectMeta.Annotations, LogTypeAnnotation)
+	}
+	// handle traces instrumentation annotations
+	// logz.io/instrument
+	statefulSet.Spec.Template.ObjectMeta.Annotations[InstrumentationAnnotation] = actionValue
+	// service name
+	if len(resource.ServiceName) != 0 {
+		statefulSet.Spec.Template.ObjectMeta.Annotations[ServiceNameAnnotation] = resource.ServiceName
+	} else {
+		delete(statefulSet.Spec.Template.ObjectMeta.Annotations, ServiceNameAnnotation)
+	}
+	_, err = clientset.AppsV1().StatefulSets(resource.Namespace).Update(ctx, statefulSet, v1.UpdateOptions{})
+	if err != nil {
+		logger.Error(api.ErrorUpdate, err)
+		return err
+	}
+	return nil
 }
 
 // calculateExpectedCrdChanges compares log type and service name of the current request and the existing crd, and return the number of expected crd changes
