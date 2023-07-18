@@ -265,11 +265,13 @@ func calculateExpectedCrdChanges(resource ResourceAnnotateRequest, crd *unstruct
 	// getting the data
 	spec := crd.Object["spec"].(map[string]interface{})
 	activeLogType := spec["logType"].(string)
-	var activeServiceName string
-	services := spec["languages"].([]interface{})
-	for _, service := range services {
-		if service.(map[string]interface{})["containerName"].(string) == resource.ContainerName {
-			activeServiceName = service.(map[string]interface{})["activeServiceName"].(string)
+	activeServiceName := ""
+	if spec["languages"] != nil {
+		services := spec["languages"].([]interface{})
+		for _, service := range services {
+			if service.(map[string]interface{})["containerName"].(string) == resource.ContainerName {
+				activeServiceName = service.(map[string]interface{})["activeServiceName"].(string)
+			}
 		}
 	}
 	// comparison

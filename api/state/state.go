@@ -156,5 +156,8 @@ func GetCustomResourcesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func calculateServiceName(service interface{}) string {
+	if service.(map[string]interface{})["activeServiceName"] == nil {
+		return ""
+	}
 	return service.(map[string]interface{})["activeServiceName"].(string)
 }
