@@ -17,6 +17,7 @@ The response body will be a JSON array of objects, where each object contains th
 - `controller_kind` (string): The kind of the controller (lowercased owner reference kind).
 - `container_name` (string, optional): The container name associated with the instrumented application. Will be empty if both language and application fields are empty.
 - `traces_instrumented` (bool): Whether the application is instrumented or not.
+- `traces_instrumentable` (bool): Whether the application can be instrumented or not.
 - `application` (string, optional): The application name if available in the spec.
 - `language` (string, optional): The programming language if available in the spec.
 - `log_type` (string, optional): The log type if available in the spec.
@@ -40,6 +41,7 @@ Each instrumented application can have a `language` and/or an `application` fiel
         "controller_kind": "deployment",
         "container_name": "app-container",
         "traces_instrumented": true,
+        "traces_instrumentable": true,
         "application": null,
         "language": "python",
         "detection_status": "Completed",
@@ -52,6 +54,7 @@ Each instrumented application can have a `language` and/or an `application` fiel
         "controller_kind": "deployment",
         "container_name": "",
         "traces_instrumented": false,
+        "traces_instrumentable": false,
         "detection_status": "Completed",
         "opentelemetry_preconfigured": false,
         "log_type": "log"
@@ -62,6 +65,7 @@ Each instrumented application can have a `language` and/or an `application` fiel
         "controller_kind": "statefulset",
         "container_name": "app-container",
         "traces_instrumented": false,
+        "traces_instrumentable": false,
         "application": "my-app",
         "language": null,
         "detection_status": "Completed",
@@ -74,6 +78,7 @@ Each instrumented application can have a `language` and/or an `application` fiel
         "controller_kind": "deployment",
         "container_name": "app-container",
         "traces_instrumented": false,
+        "traces_instrumentable": true,
         "application": null,
         "language": "java",
         "detection_status": "Completed",
@@ -107,196 +112,99 @@ Example error response:
 ```
 
 
-- ### `[POST] /api/v1/anotate/traces` Update traces Resource Annotations 
-This endpoint allows you to update annotations for Kubernetes deployments and statefulsets. The annotations can be used to enable or disable telemetry features such as metrics and traces.
+- ### POST /api/v1/annotate
+This endpoint updates the annotations on a Kubernetes resource based on the given input.
 
-### Request
+## Request:
+- path: `/api/v1/annotate`
 - Method: `POST`
-- Path: `/api/v1/anotate/traces`
 
-#### Request Body
-The request body should be a JSON array of objects, where each object contains the following fields:
-- `name` (string): The name of the resource.
-- `controller_kind` (string): The kind of the resource, either deployment or statefulset.
-- `namespace` (string): The namespace of the resource.
-- `action` (string): The action to perform, either add or delete.
-- `service_name` (string): The name of the service associated with the resource.
+**Request JSON Object:**
 
-#### Example Request Body
-json
-```json
-[
-    {
-        "name": "my-deployment",
-        "controller_kind": "deployment",
-        "namespace": "default",
-        "action": "add",
-        "service_name": "my-service"
-    },
-    {
-        "name": "my-statefulset",
-        "controller_kind": "statefulset",
-        "namespace": "default",
-        "action": "delete",
-        "service_name": "my-other-service"
-    }
-]
+*   `name` : \[string\] The name of the resource to be annotated.
+*   `namespace` : \[string\] The namespace of the resource.
+*   `controller_kind` : \[string\] The kind of controller that created the resource (either 'Deployment' or 'StatefulSet').
+*   `log_type` : \[string, optional\] The log type of the application that the container belongs to.
+*   `container_name` : \[string\] The name of the container associated with the request.
+*   `service_name` : \[string, optional\] The desired service name for the application. If this field is empty, the instrumentation will be deleted.
+
+### Success Response
+**Condition:** If the annotations on the resource are successfully updated and the custom resource is updated.
+
+**Code:** `200 OK`
+**Content example:**
+
 ```
-
-### Response
-#### Success
-- Status code: `200 OK`
-- Content-Type: `application/json`
-
-The response body will be a JSON array of objects, where each object contains the following fields:
-- `name` (string): The name of the updated resource.
-- `namespace` (string): The namespace of the updated resource.
-- `controller_kind` (string): The kind of the updated resource, either deployment or statefulset.
-- `updated_annotations` (object): The updated annotations with their keys and values.
-#### Example Success Response
-```json
-[
-    {
-        "name": "my-deployment",
-        "namespace": "default",
-        "controller_kind": "deployment",
-        "updated_annotations": {
-            "logz.io/instrument": "true",
-            "logz.io/service-name": "my-service"
-        }
-    },
-    {
-        "name": "my-statefulset",
-        "namespace": "default",
-        "controller_kind": "statefulset",
-        "updated_annotations": {
-            "logz.io/instrument": "rollback",
-            "logz.io/service-name": "my-other-service"
-        }
-    }
-]
-```
-
-#### Errors
-- Status code: `400 Bad Request`
-
-The request body is malformed, or one or more of the provided fields have invalid values.
-
-Example error response:
-
-```json
-{
-"error": "Invalid input"
+{     
+  "name": "resource-name", 
+  "namespace": "resource-namespace",     
+  "controller_kind": "Deployment",     
+  "service_name": "service-name",     
+  "container_name": "container-name",     
+  "log_type": "log-type" 
 }
 ```
 
-- Status code: `500 Internal Server Error`
+### Error Response
 
-There was an error processing the request, such as failing to interact with the Kubernetes cluster.
+**Condition:** If the request is invalid.
 
-Example error response:
+**Code:** `400 Bad Request`
 
-```json
-{
-  "error": "Error message"
+**Content example:**
+
+```
+{     
+"error": "Invalid input" 
 }
 ```
 
+**Condition:** If there is an error when getting the Kubernetes configuration.
 
-- ### `[POST] /api/v1/annotate/logs` Update Logs Resource Annotations
+**Code:** `500 Internal Server Error`
 
+**Content example:**
 
-This endpoint allows you to set the log type for Kubernetes deployments and statefulsets. The annotation is used to determine the type of logs that should be collected from the resource.
-
-### Request
-
-*   Method: `POST`
-*   Path: `/api/v1/annotate/logs`
-
-#### Request Body
-
-The request body should be a JSON array of objects, where each object contains the following fields:
-
-*   `name` (string): The name of the resource.
-*   `controller_kind` (string): The kind of the resource controller, either "deployment" or "statefulset".
-*   `namespace` (string): The namespace of the resource.
-*   `log_type` (string): The type of logs to add.
-
-#### Example Request Body
-
-```json
-[
-    {
-        "name": "my-deployment",
-        "controller_kind": "deployment",
-        "namespace": "default",
-        "log_type": "application"
-    },
-    {
-        "name": "my-statefulset",
-        "controller_kind": "statefulset",
-        "namespace": "default",
-        "log_type": "system"
-    }
-]
 
 ```
+{     
+"error": "Error in getting Kubernetes configuration" 
+}
+```
 
-### Response
+**Condition:** If there is an error when updating the resource.
 
-#### Success
+**Code:** `500 Internal Server Error`
 
-*   Status code: `200 OK`
-*   Content-Type: `application/json`
+**Content example:**
 
-The response body will be a JSON array of objects, where each object contains the following fields:
-
-*   `name` (string): The name of the updated resource.
-*   `namespace` (string): The namespace of the updated resource.
-*   `controller_kind` (string): The kind of the updated resource, either "deployment" or "statefulset".
-*   `updated_annotations` (object): The updated annotations with their keys and values.
-
-#### Example Success Response
-
-```json
-[
-    {
-        "name": "my-deployment",
-        "namespace": "default",
-        "controller_kind": "deployment",
-        "updated_annotations": {
-            "logz.io/application_type": "application"
-        }
-    },
-    {
-        "name": "my-statefulset",
-        "namespace": "default",
-        "controller_kind": "statefulset",
-        "updated_annotations": {
-            "logz.io/application_type": "system"
-        }
-    }
-]
 
 ```
-#### Errors
+{
+"error": "Error in updating resource"
+}
+```
 
-*   Status code: `400 Bad Request`
+**Condition:** If there is a timeout error.
 
-The request body is malformed, or one or more of the provided fields have invalid values.
+**Code:** `500 Internal Server Error`
 
-Example error response:
+**Content example:**
 
-jsonCopy code
 
-`{ "error": "Invalid input" }`
+```
+{
+"error": "Timeout in updating resource"
+}
+```
 
-*   Status code: `500 Internal Server Error`
+Notes
+-----
 
-There was an error processing the request, such as failing to interact with the Kubernetes cluster.
-
-Example error response:
-
-jsonCopy code
-
-`{   "error": "Error message" }`
+*   This endpoint requires a JSON request body with details about the resource to be annotated.
+*   The `controller_kind` must be either 'Deployment' or 'StatefulSet'.
+*   The server will respond with an HTTP 400 status if the `controller_kind` is invalid.
+*   The `log_type` field is optional and is used to set the desired log type. If it is not provided, any existing log type annotation on the resource will be removed.
+*   The `service_name` field is also optional. If it is provided, the server will set the service name and ensure that instrumentation is enabled. If the `service_name` is not provided, any existing service name annotation and instrumentation will be removed.
+*   The server will respond with an HTTP 500 status if it encounters any errors while updating the resource.
+*   The server will also respond with an HTTP 500 status if the operation times out.

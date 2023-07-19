@@ -12,12 +12,6 @@ import (
 	"strings"
 )
 
-const (
-	ResourceGroup                   = "logz.io"
-	ResourceVersion                 = "v1alpha1"
-	ResourceInstrumentedApplication = "instrumentedapplications"
-)
-
 // InstrumentdApplicationData is the data structure for the custom resource
 // the response will contain a list of these fields
 // name: the name of the custom resource
@@ -25,6 +19,7 @@ const (
 // controller_kind: the kind of the controller that created the custom resource
 // container_name: the name of the container
 // traces_instrumented: whether the container is instrumented or not
+// traces_instrumentable: whether we can instrument the container or not
 // application: the name of the application that the container belongs to
 // language: the language of the application that the container belongs to
 // detection_status: the status of the detection process
@@ -35,6 +30,8 @@ type InstrumentdApplicationData struct {
 	ControllerKind             string  `json:"controller_kind"`
 	ContainerName              *string `json:"container_name"`
 	TracesInstrumented         bool    `json:"traces_instrumented"`
+	ServiceName                *string `json:"service_name"`
+	TracesInstrumentable       bool    `json:"traces_instrumentable"`
 	Application                *string `json:"application"`
 	Language                   *string `json:"language"`
 	DetectionStatus            string  `json:"detection_status"`
@@ -64,9 +61,9 @@ func GetCustomResourcesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	gvr := schema.GroupVersionResource{
-		Group:    ResourceGroup,
-		Version:  ResourceVersion,
-		Resource: ResourceInstrumentedApplication,
+		Group:    api.ResourceGroup,
+		Version:  api.ResourceVersion,
+		Resource: api.ResourceInstrumentedApplication,
 	}
 	// List all custom resources
 	instrumentedApplicationsList, err := dynamicClient.Resource(gvr).Namespace("").List(context.Background(), v1.ListOptions{})
@@ -84,11 +81,10 @@ func GetCustomResourcesHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		namespace := item.GetNamespace()
-		ControllerKind := strings.ToLower(item.GetOwnerReferences()[0].Kind)
+		controllerKind := strings.ToLower(item.GetOwnerReferences()[0].Kind)
 		status := item.Object["status"].(map[string]interface{})
 		spec := item.Object["spec"].(map[string]interface{})
 		logType := spec["logType"].(string)
-
 		// Check if the languages field is present in the spec
 		languages, langOk := spec["languages"].([]interface{})
 		if langOk {
@@ -96,12 +92,16 @@ func GetCustomResourcesHandler(w http.ResponseWriter, r *http.Request) {
 			for _, language := range languages {
 				langStr := language.(map[string]interface{})["language"].(string)
 				containerNameStr := language.(map[string]interface{})["containerName"].(string)
+				// Handle the serviceName field, since this app can be instrumented
+				serviceName := calculateServiceName(language)
 				otelDetectedBool := language.(map[string]interface{})["opentelemetryPreconfigured"].(bool)
 				entry := InstrumentdApplicationData{
 					Name:                       name,
 					Namespace:                  namespace,
-					ControllerKind:             ControllerKind,
+					ControllerKind:             controllerKind,
 					TracesInstrumented:         status["tracesInstrumented"].(bool),
+					TracesInstrumentable:       true,
+					ServiceName:                &serviceName,
 					ContainerName:              &containerNameStr,
 					Language:                   &langStr,
 					DetectionStatus:            status["instrumentationDetection"].(map[string]interface{})["phase"].(string),
@@ -122,8 +122,9 @@ func GetCustomResourcesHandler(w http.ResponseWriter, r *http.Request) {
 				entry := InstrumentdApplicationData{
 					Name:                       name,
 					Namespace:                  namespace,
-					ControllerKind:             ControllerKind,
+					ControllerKind:             controllerKind,
 					TracesInstrumented:         status["tracesInstrumented"].(bool),
+					TracesInstrumentable:       false,
 					ContainerName:              &containerNameStr,
 					Application:                &applicationStr,
 					DetectionStatus:            status["instrumentationDetection"].(map[string]interface{})["phase"].(string),
@@ -139,8 +140,9 @@ func GetCustomResourcesHandler(w http.ResponseWriter, r *http.Request) {
 			entry := InstrumentdApplicationData{
 				Name:                       name,
 				Namespace:                  namespace,
-				ControllerKind:             ControllerKind,
+				ControllerKind:             controllerKind,
 				TracesInstrumented:         status["tracesInstrumented"].(bool),
+				TracesInstrumentable:       false,
 				DetectionStatus:            status["instrumentationDetection"].(map[string]interface{})["phase"].(string),
 				LogType:                    &logType,
 				OpentelemetryPreconfigured: &otelDetectedBool,
@@ -151,4 +153,11 @@ func GetCustomResourcesHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(data)
+}
+
+func calculateServiceName(service interface{}) string {
+	if service.(map[string]interface{})["activeServiceName"] == nil {
+		return ""
+	}
+	return service.(map[string]interface{})["activeServiceName"].(string)
 }
