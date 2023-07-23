@@ -15,27 +15,21 @@ import (
 )
 
 const (
-	KindDeployment             = "deployment"
-	KindStatefulSet            = "statefulSet"
-	ActionAdd                  = "add"
-	ActionDelete               = "delete"
-	ErrorDecodeJSON            = "Error decoding JSON body "
-	ErrorKubeConfig            = "Error getting Kubernetes config "
-	ErrorKubeClient            = "Error creating Kubernetes clientset "
-	ErrorInvalidInput          = "Invalid input "
-	ErrorDynamic               = "Error getting dynamic client "
-	ErrorUpdate                = "Error updating resource "
-	ErrorUpdateLogType         = "Error updating resource log type "
-	ErrorUpdateInstrumentation = "Error updating resource instrumentation "
-	ErrorGet                   = "Error getting resource "
-	ErrorList                  = "Error listing resources "
-	ErrorTimeout               = "Timeout while updating the instrumentation status: "
+	KindDeployment    = "deployment"
+	KindStatefulSet   = "statefulset"
+	ActionAdd         = "add"
+	ActionDelete      = "delete"
+	ErrorKubeConfig   = "Error getting Kubernetes config "
+	ErrorInvalidInput = "Invalid input "
+	ErrorDynamic      = "Error getting dynamic client "
+	ErrorUpdate       = "Error updating resource "
+	ErrorGet          = "Error getting resource "
+	ErrorList         = "Error listing resources "
+	ErrorTimeout      = "Timeout while updating the instrumentation status: "
 
 	ResourceGroup                   = "logz.io"
 	ResourceVersion                 = "v1alpha1"
 	ResourceInstrumentedApplication = "instrumentedapplications"
-
-	LogzioServiceAnnotationName = "logz.io/service-name"
 )
 
 var (

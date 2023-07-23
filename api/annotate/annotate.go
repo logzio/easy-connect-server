@@ -117,10 +117,12 @@ func UpdateResourceAnnotations(w http.ResponseWriter, r *http.Request) {
 	// Calculate how many crd changes are expected due to the current operations
 	expectedChanges := calculateExpectedCrdChanges(resource, customResourceObj)
 	logger.Infof("Expected numbers of changes for %s resource: %d", resource.Name, expectedChanges)
+	// get
+	isInstrumentble := isInstrumentable(customResourceObj)
 	// Create a channel to signal about workload and crd updates
 	specCh := make(chan struct{})
 	statusCh := make(chan struct{})
-	// Create a dynamic factory that watches for changes in the InstrumentedApplication CRD corresponding to the resource
+	// Create a dynamic factory that watches for changes in the InstrumentedApplication CRD corresponding to the request resource
 	dynamicFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(dynamicClient, 1*time.Second, resource.Namespace, func(options *v1.ListOptions) {
 		options.FieldSelector = "metadata.name=" + resource.Name
 	})
@@ -164,13 +166,13 @@ func UpdateResourceAnnotations(w http.ResponseWriter, r *http.Request) {
 	// Update workload and custom resources
 	switch resource.ControllerKind {
 	case api.KindDeployment:
-		err = handleUpdateDeployment(ctx, resource, clientset, logger, actionValue)
+		err = handleUpdateDeployment(ctx, resource, clientset, logger, actionValue, isInstrumentble)
 		if err != nil {
 			logger.Error(api.ErrorUpdate, err)
 			http.Error(w, api.ErrorUpdate+err.Error(), http.StatusInternalServerError)
 		}
 	case api.KindStatefulSet:
-		err = handleUpdateStatefulset(ctx, resource, clientset, logger, actionValue)
+		err = handleUpdateStatefulset(ctx, resource, clientset, logger, actionValue, isInstrumentble)
 		if err != nil {
 			logger.Error(api.ErrorUpdate, err)
 			http.Error(w, api.ErrorUpdate+err.Error(), http.StatusInternalServerError)
@@ -203,8 +205,16 @@ func isValidResourceAnnotateRequest(req ResourceAnnotateRequest) bool {
 	return false
 }
 
+// isInstrumentable checks if the resource is instrumentable
+func isInstrumentable(customResourceObj *unstructured.Unstructured) bool {
+	if customResourceObj.Object["spec"].(map[string]interface{})["languages"] == nil {
+		return false
+	}
+	return true
+}
+
 // handleUpdateDeployment handles update of deployment
-func handleUpdateDeployment(ctx context.Context, resource ResourceAnnotateRequest, clientset kubernetes.Interface, logger zap.SugaredLogger, actionValue string) error {
+func handleUpdateDeployment(ctx context.Context, resource ResourceAnnotateRequest, clientset kubernetes.Interface, logger zap.SugaredLogger, actionValue string, isInstrumentble bool) error {
 	logger.Info("Updating deployment: ", resource.Name)
 	deployment, err := clientset.AppsV1().Deployments(resource.Namespace).Get(ctx, resource.Name, v1.GetOptions{})
 	if err != nil {
@@ -220,14 +230,16 @@ func handleUpdateDeployment(ctx context.Context, resource ResourceAnnotateReques
 	} else {
 		delete(deployment.Spec.Template.ObjectMeta.Annotations, LogTypeAnnotation)
 	}
-	// handle traces instrumentation annotations
-	// logz.io/instrument
-	deployment.Spec.Template.ObjectMeta.Annotations[InstrumentationAnnotation] = actionValue
-	// service name
-	if len(resource.ServiceName) != 0 {
-		deployment.Spec.Template.ObjectMeta.Annotations[ServiceNameAnnotation] = resource.ServiceName
-	} else {
-		delete(deployment.Spec.Template.ObjectMeta.Annotations, ServiceNameAnnotation)
+	if isInstrumentble {
+		// handle traces instrumentation annotations
+		// logz.io/instrument
+		deployment.Spec.Template.ObjectMeta.Annotations[InstrumentationAnnotation] = actionValue
+		// service name
+		if len(resource.ServiceName) != 0 {
+			deployment.Spec.Template.ObjectMeta.Annotations[ServiceNameAnnotation] = resource.ServiceName
+		} else {
+			delete(deployment.Spec.Template.ObjectMeta.Annotations, ServiceNameAnnotation)
+		}
 	}
 	_, err = clientset.AppsV1().Deployments(resource.Namespace).Update(ctx, deployment, v1.UpdateOptions{})
 	if err != nil {
@@ -238,14 +250,13 @@ func handleUpdateDeployment(ctx context.Context, resource ResourceAnnotateReques
 }
 
 // handleUpdateStatefulset handles update of statefulset
-func handleUpdateStatefulset(ctx context.Context, resource ResourceAnnotateRequest, clientset kubernetes.Interface, logger zap.SugaredLogger, actionValue string) error {
+func handleUpdateStatefulset(ctx context.Context, resource ResourceAnnotateRequest, clientset kubernetes.Interface, logger zap.SugaredLogger, actionValue string, isInstrumentble bool) error {
 	logger.Info("Updating statefulset: ", resource.Name)
 	statefulSet, err := clientset.AppsV1().StatefulSets(resource.Namespace).Get(ctx, resource.Name, v1.GetOptions{})
 	if err != nil {
 		logger.Error(api.ErrorGet, err)
 		return err
 	}
-
 	if statefulSet.Spec.Template.ObjectMeta.Annotations == nil {
 		statefulSet.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
 	}
@@ -255,14 +266,16 @@ func handleUpdateStatefulset(ctx context.Context, resource ResourceAnnotateReque
 	} else {
 		delete(statefulSet.Spec.Template.ObjectMeta.Annotations, LogTypeAnnotation)
 	}
-	// handle traces instrumentation annotations
-	// logz.io/instrument
-	statefulSet.Spec.Template.ObjectMeta.Annotations[InstrumentationAnnotation] = actionValue
-	// service name
-	if len(resource.ServiceName) != 0 {
-		statefulSet.Spec.Template.ObjectMeta.Annotations[ServiceNameAnnotation] = resource.ServiceName
-	} else {
-		delete(statefulSet.Spec.Template.ObjectMeta.Annotations, ServiceNameAnnotation)
+	if isInstrumentble {
+		// handle traces instrumentation annotations
+		// logz.io/instrument
+		statefulSet.Spec.Template.ObjectMeta.Annotations[InstrumentationAnnotation] = actionValue
+		// service name
+		if len(resource.ServiceName) != 0 {
+			statefulSet.Spec.Template.ObjectMeta.Annotations[ServiceNameAnnotation] = resource.ServiceName
+		} else {
+			delete(statefulSet.Spec.Template.ObjectMeta.Annotations, ServiceNameAnnotation)
+		}
 	}
 	_, err = clientset.AppsV1().StatefulSets(resource.Namespace).Update(ctx, statefulSet, v1.UpdateOptions{})
 	if err != nil {

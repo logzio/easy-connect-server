@@ -26,6 +26,8 @@ This endpoint allows you to update annotations for Kubernetes deployments and st
 
 
 ## changelog
+- v.1.0.6
+  - Add `isInstrumentable` detection to determine behavior
 - v1.0.5
   - Unify logs and annotate traces endpoint
   - Validate instrumentation status change and log type before returning a 200 response
