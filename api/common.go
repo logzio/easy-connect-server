@@ -101,5 +101,5 @@ func GetConfig() (*rest.Config, error) {
 }
 
 func IsInternalResource(name string) bool {
-	return strings.Contains(name, "easy-connect") || (name == "kubernetes-instrumentor")
+	return strings.Contains(name, "easy-connect") || strings.Contains(name, "ezkonnect") || (name == "kubernetes-instrumentor")
 }

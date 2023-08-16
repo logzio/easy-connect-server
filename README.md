@@ -26,6 +26,8 @@ This endpoint allows you to update annotations for Kubernetes deployments and st
 
 
 ## changelog
+- v.1.0.7
+  - Refactor `ezkonnect` -> `easy-connect`
 - v.1.0.6
   - Add `isInstrumentable` detection to determine behavior
 - v1.0.5
