@@ -1,4 +1,4 @@
-module github.com/logzio/ezkonnect-server
+module github.com/logzio/easy-connect-server
 
 go 1.19
 

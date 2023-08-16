@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/gorilla/mux"
-	annotateapi "github.com/logzio/ezkonnect-server/api/annotate"
-	stateapi "github.com/logzio/ezkonnect-server/api/state"
+	annotateapi "github.com/logzio/easy-connect-server/api/annotate"
+	stateapi "github.com/logzio/easy-connect-server/api/state"
 	"log"
 	"net/http"
 )

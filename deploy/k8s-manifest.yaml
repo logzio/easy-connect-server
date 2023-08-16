@@ -1,30 +1,30 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ezkonnect-server
+  name: easy-connect-server
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ezkonnect-server
+      app: easy-connect-server
   template:
     metadata:
       labels:
-        app: ezkonnect-server
+        app: easy-connect-server
     spec:
       containers:
-        - name: ezkonnect-server
-          image: logzio/ezkonnect-server:v1.0.0
+        - name: easy-connect-server
+          image: logzio/easy-connect-server:v1.0.0
           ports:
             - containerPort: 8080
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: ezkonnect-server
+  name: easy-connect-server
 spec:
   selector:
-    app: ezkonnect-server
+    app: easy-connect-server
   ports:
     - name: http
       port: 80
@@ -33,7 +33,7 @@ spec:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: ezkonnect-server
+  name: easy-connect-server
 rules:
   - apiGroups:
       - ""
@@ -50,11 +50,11 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: ezkonnect-server
+  name: easy-connect-server
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: ezkonnect-server
+  name: easy-connect-server
 subjects:
   - kind: ServiceAccount
     name: default

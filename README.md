@@ -1,5 +1,5 @@
-# Ezkonnect-server
-Ezkonnect server is a web server written in go that exposes an API for Ezkonnect. It is responsible for managing the state of instrumented applications.
+# easy-connect-server
+easy-connect server is a web server written in go that exposes an API for easy-connect. It is responsible for managing the state of instrumented applications.
 This server is designed to run in a kubernetes environment, However it can run locally as well if a `kubeconfig` file connected to a kubernetes cluster is present on your machine.
 ### getting started
 1. Clone the repo
@@ -26,6 +26,8 @@ This endpoint allows you to update annotations for Kubernetes deployments and st
 
 
 ## changelog
+- v.1.0.7
+  - Refactor `ezkonnect` -> `easy-connect`
 - v.1.0.6
   - Add `isInstrumentable` detection to determine behavior
 - v1.0.5
@@ -44,4 +46,4 @@ This endpoint allows you to update annotations for Kubernetes deployments and st
 - v1.0.1
   - Add support for adding service name
 - v1.0.0 - Initial release
-  - A web server written in go that exposes an API for Ezkonnect. It is responsible for managing the state of instrumented applications.
+  - A web server written in go that exposes an API for easy-connect. It is responsible for managing the state of instrumented applications.

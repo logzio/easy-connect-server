@@ -3,7 +3,7 @@ package state
 import (
 	"context"
 	"encoding/json"
-	"github.com/logzio/ezkonnect-server/api"
+	"github.com/logzio/easy-connect-server/api"
 	"go.uber.org/zap"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
