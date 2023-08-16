@@ -1,4 +1,4 @@
-name: Build and deploy ezkonnect server image to dockerhub
+name: Build and deploy easy-connect server image to dockerhub
 on:
   release:
     types: [published]

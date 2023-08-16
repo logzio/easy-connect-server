@@ -1,7 +1,7 @@
-IMAGE_NAME := ezkonnect-server
-IMAGE_TAG := v1.0.6
+IMAGE_NAME := easy-connect-server
+IMAGE_TAG := v1.0.7
 DOCKER_REPO := logzio/$(IMAGE_NAME):$(IMAGE_TAG)
-K8S_NAMESPACE := ezkonnect
+K8S_NAMESPACE := easy-connect
 
 .PHONY: docker-build
 docker-build:
