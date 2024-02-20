@@ -17,7 +17,7 @@ spec:
           securityContext:
             capabilities:
               drop:
-                - NET_RAW
+                - all
           image: logzio/easy-connect-server:v1.0.0
           ports:
             - containerPort: 8080

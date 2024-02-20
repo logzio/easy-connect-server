@@ -19,7 +19,7 @@ spec:
           securityContext:
             capabilities:
               drop:
-                - NET_RAW
+                - all
           image: edenfed/adservice:v2.1
           name: server
           ports:
@@ -69,7 +69,7 @@ spec:
           securityContext:
             capabilities:
               drop:
-                - NET_RAW
+                - all
           image: edenfed/cartservice:v2.1
           name: server
           ports:
@@ -131,7 +131,7 @@ spec:
           securityContext:
             capabilities:
               drop:
-                - NET_RAW
+                - all
           image: edenfed/checkoutservice:v2.1
           name: server
           ports:
@@ -180,7 +180,7 @@ spec:
           securityContext:
             capabilities:
               drop:
-                - NET_RAW
+                - all
           image: edenfed/currencyservice:v2.1
           name: server
           ports:
@@ -233,7 +233,7 @@ spec:
           securityContext:
             capabilities:
               drop:
-                - NET_RAW
+                - all
           image: edenfed/emailservice:v2.1
           name: server
           ports:
@@ -301,7 +301,7 @@ spec:
           securityContext:
             capabilities:
               drop:
-                - NET_RAW
+                - all
           image: edenfed/frontend:v2.1
           name: server
           ports:
@@ -365,7 +365,7 @@ spec:
           securityContext:
             capabilities:
               drop:
-                - NET_RAW
+                - all
           image: edenfed/paymentservice:v2.1
           name: server
           ports:
@@ -418,7 +418,7 @@ spec:
           securityContext:
             capabilities:
               drop:
-                - NET_RAW
+                - all
           image: edenfed/productcatalogservice:v2.1
           name: server
           ports:
@@ -472,7 +472,7 @@ spec:
           securityContext:
             capabilities:
               drop:
-                - NET_RAW
+                - all
           image: edenfed/recommendationservice:v2.1
           name: server
           ports:
@@ -524,7 +524,7 @@ spec:
           securityContext:
             capabilities:
               drop:
-                - NET_RAW
+                - all
           name: redis
           ports:
             - containerPort: 6379
@@ -581,7 +581,7 @@ spec:
           securityContext:
             capabilities:
               drop:
-                - NET_RAW
+                - all
           image: edenfed/shippingservice:v2.1
           name: server
           ports:
@@ -902,7 +902,7 @@ spec:
           securityContext:
             capabilities:
               drop:
-                - NET_RAW
+                - all
           ports:
             - name: mysql
               containerPort: 3306
@@ -1176,7 +1176,7 @@ spec:
           securityContext:
             capabilities:
               drop:
-                - NET_RAW
+                - all
           ports:
             - containerPort: 80
           volumeMounts:
