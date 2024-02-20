@@ -14,6 +14,10 @@ spec:
     spec:
       containers:
         - name: easy-connect-server
+          securityContext:
+            capabilities:
+              drop:
+                - all
           image: logzio/easy-connect-server:v1.0.0
           ports:
             - containerPort: 8080
@@ -47,6 +51,12 @@ rules:
       - list
       - watch
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: easy-connect-server-account
+  namespace: default
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -57,6 +67,5 @@ roleRef:
   name: easy-connect-server
 subjects:
   - kind: ServiceAccount
-    name: default
-    # TODO: Change this to the namespace where you deployed the service
+    name: easy-connect-server-account
     namespace: default
