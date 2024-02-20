@@ -16,6 +16,10 @@ spec:
         - env:
             - name: PORT
               value: "9555"
+          securityContext:
+            capabilities:
+              drop:
+                - NET_RAW
           image: edenfed/adservice:v2.1
           name: server
           ports:
@@ -62,6 +66,10 @@ spec:
         - env:
             - name: REDIS_ADDR
               value: redis-cart:6379
+          securityContext:
+            capabilities:
+              drop:
+                - NET_RAW
           image: edenfed/cartservice:v2.1
           name: server
           ports:
@@ -120,6 +128,10 @@ spec:
               value: currencyservice:7000
             - name: CART_SERVICE_ADDR
               value: cartservice:7070
+          securityContext:
+            capabilities:
+              drop:
+                - NET_RAW
           image: edenfed/checkoutservice:v2.1
           name: server
           ports:
@@ -165,6 +177,10 @@ spec:
         - env:
             - name: PORT
               value: "7000"
+          securityContext:
+            capabilities:
+              drop:
+                - NET_RAW
           image: edenfed/currencyservice:v2.1
           name: server
           ports:
@@ -214,6 +230,10 @@ spec:
               value: "8080"
             - name: DISABLE_PROFILER
               value: "1"
+          securityContext:
+            capabilities:
+              drop:
+                - NET_RAW
           image: edenfed/emailservice:v2.1
           name: server
           ports:
@@ -278,6 +298,10 @@ spec:
               value: adservice:9555
             - name: ENV_PLATFORM
               value: aws
+          securityContext:
+            capabilities:
+              drop:
+                - NET_RAW
           image: edenfed/frontend:v2.1
           name: server
           ports:
@@ -338,6 +362,10 @@ spec:
         - env:
             - name: PORT
               value: "50051"
+          securityContext:
+            capabilities:
+              drop:
+                - NET_RAW
           image: edenfed/paymentservice:v2.1
           name: server
           ports:
@@ -387,6 +415,10 @@ spec:
         - env:
             - name: PORT
               value: "3550"
+          securityContext:
+            capabilities:
+              drop:
+                - NET_RAW
           image: edenfed/productcatalogservice:v2.1
           name: server
           ports:
@@ -437,6 +469,10 @@ spec:
               value: "8080"
             - name: PRODUCT_CATALOG_SERVICE_ADDR
               value: productcatalogservice:3550
+          securityContext:
+            capabilities:
+              drop:
+                - NET_RAW
           image: edenfed/recommendationservice:v2.1
           name: server
           ports:
@@ -485,6 +521,10 @@ spec:
             periodSeconds: 5
             tcpSocket:
               port: 6379
+          securityContext:
+            capabilities:
+              drop:
+                - NET_RAW
           name: redis
           ports:
             - containerPort: 6379
@@ -538,6 +578,10 @@ spec:
         - env:
             - name: PORT
               value: "50051"
+          securityContext:
+            capabilities:
+              drop:
+                - NET_RAW
           image: edenfed/shippingservice:v2.1
           name: server
           ports:
@@ -855,6 +899,10 @@ spec:
               value: socksdb
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: "http://otel-collector.otel-collector.svc.cluster.local:4317"
+          securityContext:
+            capabilities:
+              drop:
+                - NET_RAW
           ports:
             - name: mysql
               containerPort: 3306
@@ -1125,6 +1173,10 @@ spec:
       containers:
         - name: queue-master
           image: weaveworksdemos/queue-master:master-b8bcfc79
+          securityContext:
+            capabilities:
+              drop:
+                - NET_RAW
           ports:
             - containerPort: 80
           volumeMounts:

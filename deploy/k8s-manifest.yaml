@@ -14,6 +14,10 @@ spec:
     spec:
       containers:
         - name: easy-connect-server
+          securityContext:
+            capabilities:
+              drop:
+                - NET_RAW
           image: logzio/easy-connect-server:v1.0.0
           ports:
             - containerPort: 8080
