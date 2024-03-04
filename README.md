@@ -25,7 +25,10 @@ This endpoint allows you to update annotations for Kubernetes deployments and st
 - run `clean-kubectl` to delete the server from your cluster
 
 
-## changelog
+## changelog 
+- v.1.0.8
+  - Update containers security context
+  - Add service account to test resources
 - v.1.0.7
   - Refactor `ezkonnect` -> `easy-connect`
 - v.1.0.6
