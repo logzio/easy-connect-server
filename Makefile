@@ -1,5 +1,5 @@
 IMAGE_NAME := easy-connect-server
-IMAGE_TAG := v1.0.7
+IMAGE_TAG := v1.0.8
 DOCKER_REPO := logzio/$(IMAGE_NAME):$(IMAGE_TAG)
 K8S_NAMESPACE := easy-connect
 
